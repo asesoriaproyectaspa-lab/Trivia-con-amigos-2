@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trivia Relámpago</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap">
+<style>
+:root{--bg:#2a1b3d;--panel:#3a2753;--text:#fff6e5;--muted:#c3b4d9;--a:#ff6b8b;--b:#f2b705;--c:#5bd9a8;--d:#6aa8ff;--ink:#2a1b3d;--ok:#5bd9a8;--bad:#ff6b8b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#efe6fb;--panel:#fff;--text:#2a1b3d;--muted:#6b5a85;--ok:#14935f;--bad:#d6335a;color-scheme:light}}
+:root[data-theme="dark"]{--bg:#2a1b3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center;padding:20px 16px}
+main{width:100%;max-width:560px;display:flex;flex-direction:column;gap:18px}
+h1{font-size:clamp(2.6rem,12vw,4.2rem);line-height:.95;margin:0;font-weight:800;letter-spacing:-.03em}
+p{margin:0;line-height:1.5}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+button{font:inherit;cursor:pointer;border:0;color:inherit}
+button:focus-visible{outline:3px solid var(--b);outline-offset:3px}
+.primary{background:var(--b);color:#2a1b3d;font-weight:800;font-size:1.15rem;padding:16px 28px;border-radius:14px}
+.primary:active{transform:scale(.97)}
+.hud{display:flex;justify-content:space-between;align-items:baseline;font-weight:700}
+.bar{height:10px;border-radius:99px;background:var(--panel);overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:var(--c);transform-origin:left;transition:background .3s}
+.q{font-size:clamp(1.4rem,5.5vw,1.9rem);font-weight:700;line-height:1.2;min-height:4.8em;display:flex;align-items:center}
+.opts{display:grid;gap:12px}
+.opt{display:flex;align-items:center;gap:14px;text-align:left;padding:16px;border-radius:16px;background:var(--panel);font-weight:700;font-size:1.05rem;border:3px solid transparent;transition:transform .12s}
+.opt:active{transform:scale(.98)}
+.opt s{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;text-decoration:none;color:#2a1b3d;font-size:1.1rem}
+.opt:nth-child(1) s{background:var(--a)}.opt:nth-child(2) s{background:var(--b)}.opt:nth-child(3) s{background:var(--c)}.opt:nth-child(4) s{background:var(--d)}
+.opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 22%,var(--panel))}
+.opt.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 22%,var(--panel));animation:shake .3s}
+.opt[disabled]{cursor:default}
+.fb{min-height:1.6em;font-weight:700}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.big{font-size:clamp(4rem,22vw,7rem);font-weight:800;line-height:1;letter-spacing:-.04em;color:var(--b)}
+.card{background:var(--panel);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:6px}
+.sec{background:var(--panel);color:var(--text);font-weight:700;padding:14px 20px;border-radius:14px}
+input{font:inherit;width:100%;padding:14px;border-radius:12px;border:2px solid transparent;background:var(--panel);color:var(--text)}
+input:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+.item{display:flex;gap:10px;justify-content:space-between;align-items:center;background:var(--panel);padding:12px 14px;border-radius:12px;margin-top:8px}
+.del{background:none;color:var(--bad);font-weight:700;padding:6px}
+.code{letter-spacing:.2em}
+.rv{font-size:.95rem;color:var(--muted);min-height:1.2em}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+ <section id="home" style="gap:18px;display:flex;flex-direction:column;padding-top:8vh">
+  <h1>Trivia<br>relámpago</h1>
+  <p class="muted">10 preguntas, 15 segundos cada una. Mientras más rápido respondas, más puntos ganas.</p>
+  <div class="card"><span class="muted">Tu mejor puntaje</span><b id="best" style="font-size:1.6rem">0</b></div>
+  <button class="primary" id="start">Jugar</button>
+  <button class="primary hidden" id="mineBtn"></button>
+  <button class="sec" id="edit">Crear mis preguntas</button>
+  <button class="sec hidden" id="online">Jugar con otra persona</button>
+ </section>
+
+ <section id="lobby" style="display:none;flex-direction:column;gap:12px">
+  <h2 style="margin:0;font-size:1.8rem">Jugar con otra persona</h2>
+  <p class="muted">Los dos responden las mismas 10 preguntas y ven el puntaje del otro en vivo. La otra persona debe abrir esta misma página.</p>
+  <input id="pname" placeholder="Tu nombre" aria-label="Tu nombre" maxlength="20">
+  <div id="lobby1" style="display:flex;flex-direction:column;gap:12px">
+   <button class="primary" id="mk">Crear sala</button>
+   <input id="jc" placeholder="Código de la sala" aria-label="Código de la sala" maxlength="4" style="text-transform:uppercase">
+   <button class="sec" id="jn">Unirme a una sala</button>
+  </div>
+  <div id="lobby2" style="display:none;flex-direction:column;gap:12px">
+   <p class="muted">Código de la sala</p>
+   <div class="big code" id="rc"></div>
+   <div id="plist"></div>
+   <p class="muted" id="wait"></p>
+   <button class="primary" id="go">Empezar</button>
+  </div>
+  <div class="fb" id="lerr" role="alert"></div>
+  <button class="sec" id="lback">Volver</button>
+ </section>
+
+ <section id="editor" style="display:none;flex-direction:column;gap:12px">
+  <h2 style="margin:0;font-size:1.8rem">Mis preguntas</h2>
+  <p class="muted">Escribe la respuesta correcta y tres incorrectas. Al jugar se mezclan solas.</p>
+  <input id="fq" placeholder="Pregunta" aria-label="Pregunta" maxlength="160">
+  <input id="fa" placeholder="Respuesta correcta" aria-label="Respuesta correcta" maxlength="80">
+  <input id="fb1" placeholder="Respuesta incorrecta 1" aria-label="Respuesta incorrecta 1" maxlength="80">
+  <input id="fb2" placeholder="Respuesta incorrecta 2" aria-label="Respuesta incorrecta 2" maxlength="80">
+  <input id="fb3" placeholder="Respuesta incorrecta 3" aria-label="Respuesta incorrecta 3" maxlength="80">
+  <div class="fb" id="err" role="alert"></div>
+  <button class="primary" id="add">Agregar pregunta</button>
+  <b id="cnt"></b>
+  <div id="list"></div>
+  <button class="sec" id="back">Listo</button>
+ </section>
+
+ <section id="game" style="display:none;flex-direction:column;gap:18px">
+  <div class="hud"><span id="prog">1 / 10</span><span id="score">0 pts</span></div>
+  <div class="rv" id="rival"></div>
+  <div class="bar" aria-hidden="true"><i id="tbar"></i></div>
+  <div class="q" id="q" aria-live="polite"></div>
+  <div class="opts" id="opts"></div>
+  <div class="fb" id="fb" aria-live="polite"></div>
+  <button class="primary hidden" id="next">Siguiente</button>
+ </section>
+
+ <section id="end" style="display:none;flex-direction:column;gap:18px;padding-top:6vh">
+  <p class="muted">Puntaje final</p>
+  <div class="big" id="final">0</div>
+  <p id="msg"></p>
+  <div id="rank"></div>
+  <div class="card"><span class="muted">Aciertos</span><b id="hits" style="font-size:1.4rem"></b></div>
+  <button class="primary" id="again">Jugar otra vez</button>
+  <button class="sec" id="toHome">Volver al inicio</button>
+ </section>
+</main>
+
+<script>
+const POOL=[
+["¿Cuál es la capital de Australia?","Canberra","Sídney","Melbourne","Perth"],
+["¿Qué planeta está más cerca del Sol?","Mercurio","Venus","Marte","Tierra"],
+["¿Quién escribió «Cien años de soledad»?","Gabriel García Márquez","Mario Vargas Llosa","Julio Cortázar","Isabel Allende"],
+["¿Cuál es el río más largo de Chile?","Loa","Biobío","Maipo","Maule"],
+["¿En qué año recibió Pablo Neruda el Nobel de Literatura?","1971","1945","1960","1982"],
+["¿Cuántos huesos tiene un adulto?","206","180","256","300"],
+["¿Qué símbolo químico tiene el oro?","Au","Ag","Or","Go"],
+["¿En qué año llegó el ser humano a la Luna?","1969","1957","1975","1961"],
+["¿Cuál es la montaña más alta de Chile?","Ojos del Salado","Aconcagua","Llullaillaco","Osorno"],
+["¿Qué país tiene más habitantes hoy?","India","China","Estados Unidos","Indonesia"],
+["¿Quién pintó «La noche estrellada»?","Vincent van Gogh","Claude Monet","Pablo Picasso","Salvador Dalí"],
+["¿Cuál es el océano más grande del planeta?","Pacífico","Atlántico","Índico","Ártico"],
+["¿Qué selección ganó el Mundial de fútbol de 1998?","Francia","Brasil","Italia","Alemania"],
+["¿Cómo llaman a la Isla de Pascua sus habitantes originarios?","Rapa Nui","Mapu Nui","Tahití","Moai Nui"],
+["¿Cuántos lados tiene un hexágono?","6","5","7","8"],
+["¿Qué gas es el más abundante en la atmósfera?","Nitrógeno","Oxígeno","Dióxido de carbono","Hidrógeno"],
+["¿Quién fue la primera persona latinoamericana en ganar el Nobel de Literatura?","Gabriela Mistral","Pablo Neruda","Octavio Paz","Rosario Castellanos"],
+["¿Cuál es el animal terrestre más veloz?","Guepardo","León","Antílope","Caballo"],
+["¿Qué desierto es el más árido del mundo, sin contar los polares?","Atacama","Sahara","Gobi","Kalahari"],
+["¿Quién escribió «Don Quijote de la Mancha»?","Miguel de Cervantes","Lope de Vega","Quevedo","Calderón de la Barca"],
+["¿Cuál es la capital de Canadá?","Ottawa","Toronto","Vancouver","Montreal"],
+["¿Cuál es el órgano más grande del cuerpo humano?","La piel","El hígado","El pulmón","El intestino"]
+];
+let N=10;const T=15,SH=["▲","●","■","◆"];
+const $=id=>document.getElementById(id);
+const show=id=>["home","lobby","editor","game","end"].forEach(s=>{const e=$(s);e.style.display=s===id?"flex":"none"});
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+let qs,i,score,hits,t0,raf,locked,best=0;
+try{best=+localStorage.getItem("trivia-best")||0}catch(e){}
+$("best").textContent=best;
+
+let mine=[],mode="all",ol=null;
+try{mine=JSON.parse(localStorage.getItem("trivia-mine")||"[]")}catch(e){mine=[]}
+const saveMine=()=>{try{localStorage.setItem("trivia-mine",JSON.stringify(mine))}catch(e){}};
+function start(m){if(ol){try{ol.room.leave()}catch(e){}ol=null}$("rival").textContent="";mode=m||mode;const pool=mode==="mine"&&mine.length?mine:mine.concat(POOL);N=Math.min(10,pool.length);qs=shuffle(pool).slice(0,N);i=0;score=0;hits=0;show("game");ask()}
+function home(){if(ol){try{ol.room.leave()}catch(e){}ol=null}show("home");const b=$("mineBtn");b.classList.toggle("hidden",!mine.length);b.textContent="Jugar solo con mis preguntas ("+mine.length+")"}
+function renderList(){const L=$("list");L.innerHTML="";mine.forEach((m,k)=>{const r=document.createElement("div");r.className="item";const s=document.createElement("span");s.textContent=m[0];const d=document.createElement("button");d.className="del";d.textContent="Borrar";d.onclick=()=>{mine.splice(k,1);saveMine();renderList()};r.append(s,d);L.appendChild(r)});$("cnt").textContent=mine.length?"Tus preguntas ("+mine.length+")":"Aún no tienes preguntas propias."}
+$("add").onclick=()=>{const ids=["fq","fa","fb1","fb2","fb3"],v=ids.map(id=>$(id).value.trim());if(v.some(x=>!x)){$("err").textContent="Completa todos los campos.";return}if(new Set(v.slice(1).map(x=>x.toLowerCase())).size<4){$("err").textContent="Las 4 respuestas deben ser distintas.";return}mine.push(v);saveMine();ids.forEach(id=>$(id).value="");$("err").textContent="";renderList();$("fq").focus()};
+$("edit").onclick=()=>{renderList();show("editor")};
+$("back").onclick=home;$("toHome").onclick=home;
+function ask(){
+  locked=false;const [q,ok,...rest]=qs[i];
+  $("prog").textContent=(i+1)+" / "+N;$("score").textContent=score+" pts";
+  $("q").textContent=q;$("fb").textContent="";$("next").classList.add("hidden");
+  $("opts").innerHTML="";
+  shuffle([ok,...rest]).forEach((o,k)=>{
+    const b=document.createElement("button");b.className="opt";
+    b.innerHTML="<s>"+SH[k]+"</s><span></span>";b.lastChild.textContent=o;
+    b.onclick=()=>pick(b,o===ok);b.dataset.ok=o===ok;$("opts").appendChild(b)});
+  t0=performance.now();tick();
+}
+function tick(){
+  const left=Math.max(0,T-(performance.now()-t0)/1000);
+  const bar=$("tbar");bar.style.transform="scaleX("+left/T+")";
+  bar.style.background=left<5?"var(--bad)":left<9?"var(--b)":"var(--c)";
+  if(left<=0){pick(null,false,true);return}
+  raf=requestAnimationFrame(tick);
+}
+function pick(btn,right,timeout){
+  if(locked)return;locked=true;cancelAnimationFrame(raf);
+  const left=Math.max(0,T-(performance.now()-t0)/1000);
+  document.querySelectorAll(".opt").forEach(o=>{o.disabled=true;if(o.dataset.ok==="true")o.classList.add("ok")});
+  if(right){const p=100+Math.round(left*5);score+=p;hits++;$("fb").textContent="¡Correcto! +"+p+" puntos"}
+  else{if(btn)btn.classList.add("bad");$("fb").textContent=timeout?"Se acabó el tiempo.":"Esa no era."}
+  $("score").textContent=score+" pts";
+  sync();const n=$("next");n.textContent=i===N-1?"Ver resultado":"Siguiente";n.classList.remove("hidden");n.focus();
+}
+function finish(){
+  show("end");$("again").style.display=ol?"none":"";$("final").textContent=score;sync(true);$("rank").innerHTML="";peersUpdate();$("hits").textContent=hits+" de "+N;
+  const rec=score>best;
+  if(rec){best=score;try{localStorage.setItem("trivia-best",best)}catch(e){}}
+  $("best").textContent=best;
+  $("msg").textContent=rec?"¡Nuevo récord!":hits>=8?"Muy bien, sabes harto.":hits>=5?"Nada mal. Con otra ronda lo mejoras.":"Se puede mejorar. Prueba de nuevo.";
+}
+$("start").onclick=()=>start("all");$("mineBtn").onclick=()=>start("mine");$("again").onclick=()=>start();
+function rng(s){let h=1779033703^s.length;for(let k=0;k<s.length;k++){h=Math.imul(h^s.charCodeAt(k),3432918353);h=h<<13|h>>>19}let a=h>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function seeded(a,code){const r=rng(code);a=a.slice();for(let k=a.length-1;k>0;k--){const j=Math.floor(r()*(k+1));[a[k],a[j]]=[a[j],a[k]]}return a}
+function nm(){return($("pname").value.trim()||"Jugador").slice(0,20)}
+function sync(d){if(!ol)return;ol.room.presence({score:score,idx:i,done:!!d}).catch(()=>{})}
+function startOnline(){N=10;qs=seeded(POOL,ol.code).slice(0,N);i=0;score=0;hits=0;show("game");ask()}
+function renderRank(ps){const R=$("rank");R.innerHTML="";ps.slice().sort((a,b)=>(b.presence.score||0)-(a.presence.score||0)).forEach((p,k)=>{const r=document.createElement("div");r.className="item";const s=document.createElement("span");s.textContent=(k+1)+". "+p.presence.name+(p.isMe?" (tú)":"")+(p.presence.done?"":" (jugando…)");const b=document.createElement("b");b.textContent=(p.presence.score||0)+" pts";r.append(s,b);R.appendChild(r)})}
+function peersUpdate(){
+ if(!ol)return;
+ const ps=ol.room.peers().filter(p=>p.kind==="viewer"&&p.presence&&p.presence.name);
+ const L=$("plist");L.innerHTML="";
+ ps.forEach(p=>{const r=document.createElement("div");r.className="item";const s=document.createElement("span");s.textContent=String(p.presence.name)+(p.isMe?" (tú)":"");r.appendChild(s);L.appendChild(r)});
+ $("wait").textContent=ol.host?(ps.length<2?"Esperando a la otra persona…":""):"Esperando que el anfitrión empiece…";
+ if(!ol.host&&!ol.started&&ps.some(p=>p.presence.host&&p.presence.go)){ol.started=true;startOnline()}
+ $("rival").textContent=ps.filter(p=>!p.isMe).map(p=>p.presence.name+": "+(p.presence.score||0)+" pts · pregunta "+Math.min(N,(p.presence.idx||0)+1)+"/"+N+(p.presence.done?" (terminó)":"")).join("   ");
+ if($("end").style.display==="flex")renderRank(ps);
+}
+async function enter(code,host){
+ const R=window.claude?await claude.use("room"):null;
+ if(!R){$("lerr").textContent="No se pudo conectar. Abre la página desde tu cuenta de Claude e inténtalo otra vez.";return}
+ let room;try{room=await R.join("trivia-"+code.toLowerCase())}catch(e){$("lerr").textContent="No pude entrar a la sala. Inténtalo de nuevo.";return}
+ ol={room:room,code:code,host:host,started:false};
+ try{await room.presence({name:nm(),score:0,idx:0,done:false,host:!!host,go:false})}catch(e){}
+ room.onPeers(peersUpdate);
+ $("lerr").textContent="";$("lobby1").style.display="none";$("lobby2").style.display="flex";$("rc").textContent=code;
+ $("go").style.display=host?"":"none";
+ peersUpdate();
+}
+$("online").onclick=()=>{$("lerr").textContent="";$("lobby1").style.display="flex";$("lobby2").style.display="none";show("lobby")};
+$("mk").onclick=()=>{const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let c="";for(let k=0;k<4;k++)c+=A[Math.random()*A.length|0];enter(c,true)};
+$("jn").onclick=()=>{const c=$("jc").value.trim().toUpperCase();if(!/^[A-Z0-9]{4}$/.test(c)){$("lerr").textContent="El código tiene 4 letras o números.";return}enter(c,false)};
+$("go").onclick=async()=>{if(!ol)return;ol.started=true;try{await ol.room.presence({go:true,idx:0,score:0,done:false})}catch(e){}startOnline()};
+$("lback").onclick=home;
+home();
+try{if(window.claude&&claude.use)claude.use("room").then(R=>{if(R)$("online").classList.remove("hidden")}).catch(()=>{})}catch(e){}
+$("next").onclick=()=>{if(i===N-1)finish();else{i++;ask()}};
+</script>
+</body>
+</html>
